@@ -23,6 +23,7 @@ interface StudentLabScenariosProps {
   onAddNewScenario?: (scenario: LabScenario) => void;
   onDeleteScenario?: (scenarioId: string) => void;
   onOpenStudio?: () => void;
+  onRunScenarioInApp?: (category: LabScenario['category']) => void;
 }
 
 export const StudentLabScenarios: React.FC<StudentLabScenariosProps> = ({
@@ -31,7 +32,8 @@ export const StudentLabScenarios: React.FC<StudentLabScenariosProps> = ({
   scenarios,
   onAddNewScenario,
   onDeleteScenario,
-  onOpenStudio
+  onOpenStudio,
+  onRunScenarioInApp
 }) => {
   const [activeScenarioId, setActiveScenarioId] = useState<string>(scenarios[0]?.id || 'SCENARIO-1');
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -455,6 +457,16 @@ export const StudentLabScenarios: React.FC<StudentLabScenariosProps> = ({
                     <span>{activeScenario.triggerCondition}</span>
                   </div>
                 </div>
+
+                {onRunScenarioInApp && (
+                  <button
+                    onClick={() => onRunScenarioInApp(activeScenario.category)}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 shadow"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                    <span>▶ Buka & Uji Kasus Ini di Simulasi Live ({activeScenario.category})</span>
+                  </button>
+                )}
               </div>
 
               {/* Checklist of Tasks */}

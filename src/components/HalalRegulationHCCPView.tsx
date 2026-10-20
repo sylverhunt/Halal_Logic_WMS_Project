@@ -16,6 +16,7 @@ export const HalalRegulationHCCPView: React.FC = () => {
   const [selectedPrinciple, setSelectedPrinciple] = useState<number>(1);
   const [sertuStep, setSertuStep] = useState<number>(0); // 0 = not started, 1..7 washes, 8 = verified
   const [sertuFacilityCleaned, setSertuFacilityCleaned] = useState<boolean>(false);
+  const [activeHazardTested, setActiveHazardTested] = useState<boolean>(false);
 
   const activeRule = HCCP_RULES.find(r => r.principle === selectedPrinciple) || HCCP_RULES[0];
 
@@ -149,6 +150,50 @@ export const HalalRegulationHCCPView: React.FC = () => {
               <p className="text-slate-300 leading-relaxed">{activeRule.correctiveAction}</p>
             </div>
           </div>
+
+          {/* Interactive Hazard Simulation Trigger */}
+          <div className="p-4 bg-slate-950 border border-amber-900/40 rounded-xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <AlertOctagon className="w-4 h-4 text-amber-400" />
+                <span>Simulasi Uji Kasus Kritis Prinsip #{activeRule.principle}:</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveHazardTested(true)}
+                  className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded text-xs flex items-center gap-1 shadow"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>⚡ Uji Simulasi Pelanggaran Kasus Ini</span>
+                </button>
+                {activeHazardTested && (
+                  <button
+                    onClick={() => setActiveHazardTested(false)}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs"
+                  >
+                    Reset Uji
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {activeHazardTested && (
+              <div className="p-3 bg-amber-950/40 border border-amber-600 rounded-lg text-xs space-y-2 animate-in fade-in">
+                <div className="flex items-center justify-between text-amber-300 font-bold">
+                  <span>⚠️ HASIL SIMULASI INSIDEN LAPANGAN:</span>
+                  <span className="text-[10px] px-2 py-0.5 bg-amber-900 rounded text-amber-100">Karantina Otomatis</span>
+                </div>
+                <p className="text-slate-200 leading-relaxed">
+                  Insiden terjadi pada <strong>{activeRule.title}</strong>! Batas kritis terlampaui. SOP Penanganan Darurat mewajibkan:
+                  <span className="block mt-1 text-emerald-300 font-medium">➔ {activeRule.correctiveAction}</span>
+                </p>
+                <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Petugas Audit BPJPH memvalidasi laporan koreksi dan Berita Acara diterbitkan.</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -193,12 +238,12 @@ export const HalalRegulationHCCPView: React.FC = () => {
           </div>
         </div>
 
-        {/* Sertu Progress Visualizer */}
-        <div className="space-y-3">
+        {/* Sertu Progress Visualizer with Graphic Wash Bay Simulation */}
+        <div className="space-y-4">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-300">
+            <span className="text-slate-300 font-medium">
               {sertuStep === 0 && 'Status: Belum dimulai. Fasilitas terkontaminasi terisolasi di stasiun cuci.'}
-              {sertuStep === 1 && 'Langkah 1: Menghilangkan wujud (' + 'ain), bau, dan rasa najis fisik.'}
+              {sertuStep === 1 && 'Langkah 1: Menghilangkan wujud (\'ain), bau, dan rasa najis fisik.'}
               {sertuStep === 2 && 'Basuhan Ke-1: Menggunakan air bersih mengalir.'}
               {sertuStep === 3 && 'Basuhan Ke-2 (KRITIS): Campuran air dan tanah suci bebas najis.'}
               {sertuStep >= 4 && sertuStep <= 7 && `Basuhan Ke-${sertuStep - 1}: Pembilasan air bersih mengalir.`}
@@ -209,7 +254,69 @@ export const HalalRegulationHCCPView: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-8 gap-2">
+          {/* VISUAL WASH BAY ARENA */}
+          <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              {/* Left: Forklift Vehicle & Wash Visualizer */}
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl border-2 transition-all ${
+                    sertuStep === 0 
+                      ? 'bg-rose-950/80 border-rose-500 text-rose-300 shadow-rose-900/40 shadow-lg' 
+                      : sertuStep < 8 
+                      ? 'bg-amber-950/80 border-amber-500 text-amber-300 animate-pulse' 
+                      : 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-emerald-900/40 shadow-lg'
+                  }`}>
+                    🚜
+                  </div>
+                  {/* Water / Soil Particle Animation */}
+                  {sertuStep > 0 && sertuStep < 8 && (
+                    <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500 text-white animate-bounce shadow">
+                      {sertuStep === 3 ? '🌱 Tanah Suci' : '💧 Air Mengalir'}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white">Forklift F-02 (Area Dock 1)</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                      sertuStep === 0
+                        ? 'bg-rose-900/80 text-rose-200 border border-rose-600'
+                        : sertuStep < 8
+                        ? 'bg-amber-900/80 text-amber-200 border border-amber-600 animate-pulse'
+                        : 'bg-emerald-900/80 text-emerald-200 border border-emerald-600'
+                    }`}>
+                      {sertuStep === 0 ? 'TERKONTAMINASI NAJIS' : sertuStep < 8 ? `PROSES SERTU (${sertuStep}/8)` : 'SUCI & TERVERIFIKASI'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Lokasi: Bilik Pencucian Khusus (Dedicated Wash Bay) · Air Mengalir Bertekanan
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: Contamination Cleansing Gauge */}
+              <div className="w-full md:w-64 space-y-1.5">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-slate-400">Tingkat Kemurnian Fasilitas:</span>
+                  <span className="font-mono font-bold text-emerald-400">
+                    {Math.min(100, Math.round((sertuStep / 8) * 100))}%
+                  </span>
+                </div>
+                <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      sertuStep === 0 ? 'w-0' : sertuStep < 3 ? 'bg-amber-500' : sertuStep < 8 ? 'bg-sky-500' : 'bg-emerald-500'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.round((sertuStep / 8) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
@@ -221,13 +328,14 @@ export const HalalRegulationHCCPView: React.FC = () => {
                     : 'bg-slate-950 border border-slate-800 text-slate-500'
                 }`}
               >
-                {i === 0 ? 'Fisik' : i === 2 ? 'Air Tanah' : i === 7 ? 'Sahkan' : `Air ${i}`}
+                <div className="text-[10px] opacity-75">{i + 1}</div>
+                <div>{i === 0 ? 'Fisik' : i === 2 ? 'Air Tanah' : i === 7 ? 'Sahkan' : `Air ${i}`}</div>
               </div>
             ))}
           </div>
 
           {sertuFacilityCleaned && (
-            <div className="p-3 bg-emerald-950/40 border border-emerald-600 rounded text-xs text-emerald-300 flex items-center justify-between">
+            <div className="p-3 bg-emerald-950/40 border border-emerald-600 rounded text-xs text-emerald-300 flex items-center justify-between animate-in fade-in">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>Berita Acara Sertu disetujui: Forklift F-02 dan area Dock telah suci kembali sesuai syariat.</span>

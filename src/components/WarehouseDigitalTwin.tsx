@@ -72,6 +72,65 @@ export const WarehouseDigitalTwin: React.FC<WarehouseDigitalTwinProps> = ({
     { id: '4', time: '09:30:22', text: 'AS/RS: Put-away selesai di rak level 3 Bay C-01', type: 'success' }
   ]);
 
+  // Automated Put-away Simulation State
+  const [putawayCycleRunning, setPutawayCycleRunning] = useState<boolean>(false);
+  const [putawayPhase, setPutawayPhase] = useState<number>(0); // 0=idle, 1=dock rfid, 2=conveyor, 3=agv pickup, 4=rack storage, 5=verified
+  const [putawayMessage, setPutawayMessage] = useState<string>('');
+
+  const handleStartPutawayCycle = () => {
+    if (putawayCycleRunning) return;
+    setPutawayCycleRunning(true);
+    setPutawayPhase(1);
+    setPutawayMessage('Langkah 1/5: Palet #LOT-BF-901 tiba di Dock 1 Inbound. Pemindaian portal RFID BPJPH...');
+    setAgvPositionPercent(10);
+    setAgvStatusText('Menuju Dock 1 untuk mengambil Palet Daging Sapi Halal');
+    setAgvCurrentLocation('Dock 1 (Inbound)');
+
+    setTimeout(() => {
+      setPutawayPhase(2);
+      setPutawayMessage('Langkah 2/5: Validasi Sertifikat BPJPH #ID0031000293182 lolos. Palet masuk ke Konveyor AS/RS...');
+      setAgvPositionPercent(35);
+      setAgvStatusText('Palet meluncur pada Konveyor Roller Otomatis');
+      setAgvCurrentLocation('Jalur Konveyor AS/RS');
+      setThroughputInbound(prev => prev + 1);
+    }, 1200);
+
+    setTimeout(() => {
+      setPutawayPhase(3);
+      setPutawayMessage('Langkah 3/5: Robot AGV-04 mengangkat palet dari transfer station, menuju Zona Cold Chain...');
+      setAgvPositionPercent(60);
+      setAgvStatusText('Robot AGV-04 membawa palet menuju Bay C-01');
+      setAgvCurrentLocation('Lorong Cold Chain Bay C');
+    }, 2400);
+
+    setTimeout(() => {
+      setPutawayPhase(4);
+      setPutawayMessage('Langkah 4/5: Crane AS/RS menaikkan palet ke rak Level 2 Bay C-01 (-20°C)...');
+      setAgvPositionPercent(75);
+      setAgvStatusText('Menempatkan palet ke slot penyimpanan Cold Storage');
+      setAgvCurrentLocation('Rak Bay C-01');
+      setThroughputPutaway(prev => prev + 1);
+    }, 3600);
+
+    setTimeout(() => {
+      setPutawayPhase(5);
+      setPutawayMessage('Langkah 5/5: Sukses! Palet tersimpan aman, barcode & RFID terdaftar di WMS, suhu stabil -20.4°C.');
+      setAgvPositionPercent(90);
+      setAgvStatusText('Kembali ke stasiun pengisian daya (Idle)');
+      setAgvCurrentLocation('Stasiun Dock 2 / Charger');
+      setEventLogs(prev => [
+        { id: Date.now().toString(), time: new Date().toTimeString().split(' ')[0], text: 'Siklus Put-Away Otomatis Selesai: Palet #LOT-BF-901 berhasil ditempatkan di Bay C-01', type: 'success' },
+        ...prev
+      ]);
+      onUpdateBay('bay-c1', { occupiedPallets: Math.min(40, (bays.find(b => b.id === 'bay-c1')?.occupiedPallets || 28) + 1) });
+      
+      setTimeout(() => {
+        setPutawayCycleRunning(false);
+        setPutawayPhase(0);
+      }, 3000);
+    }, 4800);
+  };
+
   // Clock & AGV movement ticker
   useEffect(() => {
     if (!simulationRunning) return;
@@ -265,6 +324,17 @@ export const WarehouseDigitalTwin: React.FC<WarehouseDigitalTwinProps> = ({
               <span>Reset Simulasi Gudang</span>
             </button>
 
+            {/* Live Automated Put-away trigger */}
+            <button
+              onClick={handleStartPutawayCycle}
+              disabled={putawayCycleRunning}
+              title="Jalankan simulasi otomatis: kedatangan palet di Dock 1, scan RFID, konveyor AS/RS, dan robot AGV menempatkan palet ke rak"
+              className="px-3 py-1.5 bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-md ring-1 ring-cyan-400/40 animate-pulse"
+            >
+              <Zap className="w-3.5 h-3.5 text-cyan-200" />
+              <span>{putawayCycleRunning ? 'Sedang Berjalan...' : '⚡ Jalankan Put-Away Otomatis'}</span>
+            </button>
+
             {/* Manual Anomaly triggers for training students */}
             <button
               onClick={() => onTriggerAnomaly('COLD_CHAIN')}
@@ -320,6 +390,44 @@ export const WarehouseDigitalTwin: React.FC<WarehouseDigitalTwinProps> = ({
           </div>
         </div>
       </div>
+
+      {/* VISIBLE ACTIVE PUT-AWAY SIMULATION MONITOR */}
+      {putawayPhase > 0 && (
+        <div className="p-4 bg-cyan-950/60 border-2 border-cyan-500 rounded-xl space-y-3 animate-in fade-in shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cyan-800/60 pb-2">
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-cyan-400 animate-spin" />
+              <h3 className="text-sm font-bold text-white">
+                Simulasi Put-Away Palet Otomatis Berjalan (Inbound ➔ AS/RS ➔ Bay C-01)
+              </h3>
+            </div>
+            <span className="text-xs font-mono font-bold text-cyan-300 bg-cyan-900/80 px-2.5 py-0.5 rounded border border-cyan-700">
+              Tahap {putawayPhase} dari 5
+            </span>
+          </div>
+
+          <p className="text-xs text-cyan-100 font-medium">{putawayMessage}</p>
+
+          {/* 5-Phase Step Indicators */}
+          <div className="grid grid-cols-5 gap-2 pt-1 text-[11px] font-semibold">
+            <div className={`p-2 rounded text-center border ${putawayPhase >= 1 ? 'bg-cyan-600 text-white border-cyan-400 shadow' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>
+              1. Dock 1 RFID
+            </div>
+            <div className={`p-2 rounded text-center border ${putawayPhase >= 2 ? 'bg-cyan-600 text-white border-cyan-400 shadow' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>
+              2. Konveyor AS/RS
+            </div>
+            <div className={`p-2 rounded text-center border ${putawayPhase >= 3 ? 'bg-cyan-600 text-white border-cyan-400 shadow' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>
+              3. Robot AGV-04
+            </div>
+            <div className={`p-2 rounded text-center border ${putawayPhase >= 4 ? 'bg-cyan-600 text-white border-cyan-400 shadow' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>
+              4. Rak Bay C-01
+            </div>
+            <div className={`p-2 rounded text-center border ${putawayPhase >= 5 ? 'bg-emerald-600 text-white border-emerald-400 shadow' : 'bg-slate-900 text-slate-500 border-slate-800'}`}>
+              5. Terverifikasi
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* VISIBLE ACTIVE AGV & CONVEYOR SIMULATION ARENA */}
       <div className="p-4 bg-slate-900 border border-emerald-500/30 rounded-xl space-y-3">

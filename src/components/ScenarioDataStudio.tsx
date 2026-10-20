@@ -28,6 +28,7 @@ interface ScenarioDataStudioProps {
   onImportFullState: (jsonState: any) => void;
   onResetToDefault: () => void;
   onOpenLab: () => void;
+  onNavigateTab?: (tab: string) => void;
 }
 
 export const ScenarioDataStudio: React.FC<ScenarioDataStudioProps> = ({
@@ -39,7 +40,8 @@ export const ScenarioDataStudio: React.FC<ScenarioDataStudioProps> = ({
   onLoadPreset,
   onImportFullState,
   onResetToDefault,
-  onOpenLab
+  onOpenLab,
+  onNavigateTab
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'presets' | 'create_scenario' | 'add_sku' | 'json_io'>('presets');
   const [notification, setNotification] = useState<string | null>(null);
@@ -236,10 +238,26 @@ export const ScenarioDataStudio: React.FC<ScenarioDataStudioProps> = ({
 
       {/* Floating Notification */}
       {notification && (
-        <div className="p-3 bg-emerald-950 border border-emerald-500 text-emerald-200 text-xs rounded-xl flex items-center justify-between animate-in fade-in">
+        <div className="p-3 bg-emerald-950 border border-emerald-500 text-emerald-200 text-xs rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in shadow-lg">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{notification}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {onNavigateTab && (
+              <button
+                onClick={() => onNavigateTab('warehouse')}
+                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold whitespace-nowrap"
+              >
+                Lihat di Denah Gudang ➔
+              </button>
+            )}
+            <button
+              onClick={onOpenLab}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] font-semibold whitespace-nowrap"
+            >
+              Buka Lab Praktikum ➔
+            </button>
           </div>
         </div>
       )}

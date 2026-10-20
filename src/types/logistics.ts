@@ -163,7 +163,8 @@ export interface AuditChecklistItem {
   standardClause: string;
   requirement: string;
   evidenceType: 'IoT Log' | 'Physical Inspection' | 'Digital Certificate' | 'SOP Document' | 'Cleaning Log';
-  currentStatus: 'COMPLIANT' | 'NON_COMPLIANT' | 'ATTENTION';
+  currentStatus: 'COMPLIANT' | 'NON_COMPLIANT' | 'ATTENTION' | 'NEEDS_CORRECTION';
+  status?: 'COMPLIANT' | 'NON_COMPLIANT' | 'ATTENTION' | 'NEEDS_CORRECTION';
   score: number; // 0 - 100
   notes: string;
 }

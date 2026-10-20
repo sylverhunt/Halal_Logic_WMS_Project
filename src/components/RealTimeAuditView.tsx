@@ -9,7 +9,10 @@ import {
   Award, 
   Calendar,
   Building,
-  UserCheck
+  UserCheck,
+  RotateCcw,
+  Zap,
+  XCircle
 } from 'lucide-react';
 
 interface RealTimeAuditViewProps {
@@ -19,12 +22,68 @@ interface RealTimeAuditViewProps {
 
 export const RealTimeAuditView: React.FC<RealTimeAuditViewProps> = ({
   checklist,
-  halalScore
+  halalScore: initialHalalScore
 }) => {
+  const [auditItems, setAuditItems] = useState<AuditChecklistItem[]>(() =>
+    checklist.map(i => ({ ...i, status: i.status || i.currentStatus }))
+  );
   const [studentName, setStudentName] = useState<string>('Mahasiswa Teknik Logistik');
   const [studentNIM, setStudentNIM] = useState<string>('21/482910/TK/52104');
   const [university, setUniversity] = useState<string>('Departemen Teknik Mesin & Industri - Lab Logistik & Rantai Pasok');
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+
+  // Compute live compliance score from items
+  const dynamicScore = Math.round(
+    auditItems.reduce((sum, item) => sum + (item.status === 'COMPLIANT' ? item.score : item.status === 'NEEDS_CORRECTION' ? item.score * 0.5 : 0), 0) /
+    (auditItems.length || 1)
+  );
+
+  const effectiveScore = dynamicScore;
+
+  const handleToggleItemStatus = (itemId: string) => {
+    setAuditItems(prev =>
+      prev.map(item => {
+        if (item.id === itemId) {
+          const nextStatus: AuditChecklistItem['currentStatus'] =
+            (item.status || item.currentStatus) === 'COMPLIANT'
+              ? 'NON_COMPLIANT'
+              : (item.status || item.currentStatus) === 'NON_COMPLIANT'
+              ? 'NEEDS_CORRECTION'
+              : 'COMPLIANT';
+          return { ...item, status: nextStatus, currentStatus: nextStatus };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleResetAuditChecklist = () => {
+    setAuditItems(checklist.map(item => ({ ...item, status: 'COMPLIANT', currentStatus: 'COMPLIANT', score: 100 })));
+  };
+
+  const handleInjectFindings = () => {
+    setAuditItems(prev =>
+      prev.map((item, idx) => {
+        if (idx === 1) {
+          return {
+            ...item,
+            status: 'NON_COMPLIANT',
+            score: 40,
+            notes: 'TEMUAN AUDIT: Fluktuasi suhu terdeteksi di probe C-01 melewati -18°C selama 22 menit.'
+          };
+        }
+        if (idx === 3) {
+          return {
+            ...item,
+            status: 'NEEDS_CORRECTION',
+            score: 70,
+            notes: 'TEMUAN MINOR: Kartu kendali pembersihan MHE Forklift F-02 belum ditandatangani Penyelia Halal.'
+          };
+        }
+        return item;
+      })
+    );
+  };
 
   const handlePrint = () => {
     window.print();
@@ -44,13 +103,33 @@ export const RealTimeAuditView: React.FC<RealTimeAuditViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={() => setShowPrintModal(true)}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1.5 self-start md:self-auto"
-        >
-          <Printer className="w-4 h-4" />
-          <span>Generate Laporan Audit Resmi Mahasiswa</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleInjectFindings}
+            title="Simulasikan temuan audit lapangan untuk menguji respons sistem"
+            className="px-3 py-1.5 bg-amber-950/70 hover:bg-amber-900 border border-amber-800 text-amber-300 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span>Uji Skenario Temuan Audit</span>
+          </button>
+
+          <button
+            onClick={handleResetAuditChecklist}
+            title="Reset seluruh klausul audit kembali ke status 100% Compliant"
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+            <span>Reset Audit (100%)</span>
+          </button>
+
+          <button
+            onClick={() => setShowPrintModal(true)}
+            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow transition-colors flex items-center gap-1.5"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Laporan Berita Acara</span>
+          </button>
+        </div>
       </div>
 
       {/* Real-time Halal Compliance Score Meter */}
@@ -74,10 +153,10 @@ export const RealTimeAuditView: React.FC<RealTimeAuditViewProps> = ({
                 cx="50"
                 cy="50"
                 r="42"
-                stroke={halalScore >= 90 ? '#10b981' : halalScore >= 75 ? '#f59e0b' : '#ef4444'}
+                stroke={effectiveScore >= 90 ? '#10b981' : effectiveScore >= 75 ? '#f59e0b' : '#ef4444'}
                 strokeWidth="8"
                 strokeDasharray="264"
-                strokeDashoffset={264 - (264 * halalScore) / 100}
+                strokeDashoffset={264 - (264 * effectiveScore) / 100}
                 strokeLinecap="round"
                 fill="none"
                 className="transition-all duration-700 ease-out"
@@ -85,10 +164,12 @@ export const RealTimeAuditView: React.FC<RealTimeAuditViewProps> = ({
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-extrabold font-mono text-white tabular-nums">
-                {halalScore}%
+                {effectiveScore}%
               </span>
-              <span className="text-[10px] text-emerald-400 font-bold uppercase">
-                {halalScore >= 95 ? 'GRADE A (SANGAT BAIK)' : halalScore >= 80 ? 'GRADE B (BAIK)' : 'PERLU PERBAIKAN'}
+              <span className={`text-[10px] font-bold uppercase ${
+                effectiveScore >= 90 ? 'text-emerald-400' : effectiveScore >= 75 ? 'text-amber-400' : 'text-rose-400'
+              }`}>
+                {effectiveScore >= 95 ? 'GRADE A (SANGAT BAIK)' : effectiveScore >= 80 ? 'GRADE B (BAIK)' : 'PERLU PERBAIKAN'}
               </span>
             </div>
           </div>
@@ -118,10 +199,12 @@ export const RealTimeAuditView: React.FC<RealTimeAuditViewProps> = ({
             <div>
               <div className="flex justify-between text-slate-300 mb-1">
                 <span>Kepatuhan Suhu Cold Chain RTD IoT (Batas Kritis -18°C):</span>
-                <span className="font-mono text-sky-400 font-bold">96% (Bobot 25%)</span>
+                <span className={`font-mono font-bold ${auditItems[1]?.status === 'NON_COMPLIANT' ? 'text-rose-400' : 'text-sky-400'}`}>
+                  {auditItems[1]?.status === 'NON_COMPLIANT' ? '40% (Temuan Pelanggaran)' : '96% (Bobot 25%)'}
+                </span>
               </div>
               <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                <div className="bg-sky-500 h-full w-[96%]" />
+                <div className={`h-full ${auditItems[1]?.status === 'NON_COMPLIANT' ? 'bg-rose-500 w-[40%]' : 'bg-sky-500 w-[96%]'}`} />
               </div>
             </div>
 
@@ -160,10 +243,13 @@ export const RealTimeAuditView: React.FC<RealTimeAuditViewProps> = ({
 
       {/* Audit Checklist Table */}
       <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-          <span>Matriks Kepatuhan Klausul Standar Audit Lapangan (SNI 99004:2021)</span>
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>Matriks Kepatuhan Klausul Standar Audit Lapangan (SNI 99004:2021)</span>
+          </h3>
+          <span className="text-xs text-slate-400">Klik status pada baris tabel untuk mengubah hasil audit (Simulasi Lapangan)</span>
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
@@ -173,31 +259,54 @@ export const RealTimeAuditView: React.FC<RealTimeAuditViewProps> = ({
                 <th className="px-4 py-3">Deskripsi Persyaratan Kepatuhan</th>
                 <th className="px-4 py-3">Bukti Bukti (Evidence)</th>
                 <th className="px-4 py-3">Skor</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Status Audit (Klik untuk Mengubah)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
-              {checklist.map((item) => (
+              {auditItems.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
                   <td className="px-4 py-3 font-mono font-semibold text-white whitespace-nowrap">
                     {item.standardClause}
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-slate-200">{item.requirement}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{item.notes}</p>
+                    <p className={`text-[10px] mt-0.5 ${item.status === 'NON_COMPLIANT' ? 'text-rose-400 font-semibold' : 'text-slate-400'}`}>
+                      {item.notes}
+                    </p>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-[11px] font-mono text-slate-300 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
                       {item.evidenceType}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono font-semibold text-emerald-400 tabular-nums">
-                    {item.score}%
+                  <td className="px-4 py-3 font-mono font-semibold tabular-nums">
+                    <span className={item.status === 'COMPLIANT' ? 'text-emerald-400' : item.status === 'NEEDS_CORRECTION' ? 'text-amber-400' : 'text-rose-400'}>
+                      {item.score}%
+                    </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800 px-2 py-0.5 rounded">
-                      <CheckCircle2 className="w-3 h-3" /> COMPLIANT
-                    </span>
+                    <button
+                      onClick={() => handleToggleItemStatus(item.id)}
+                      title="Klik untuk mengubah status audit item ini"
+                      className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded border transition-all ${
+                        item.status === 'COMPLIANT'
+                          ? 'text-emerald-300 bg-emerald-950/60 border-emerald-700 hover:border-emerald-500'
+                          : item.status === 'NEEDS_CORRECTION'
+                          ? 'text-amber-300 bg-amber-950/60 border-amber-700 hover:border-amber-500'
+                          : 'text-rose-300 bg-rose-950/60 border-rose-700 hover:border-rose-500 animate-pulse'
+                      }`}
+                    >
+                      {item.status === 'COMPLIANT' ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : item.status === 'NEEDS_CORRECTION' ? (
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      ) : (
+                        <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                      )}
+                      <span>
+                        {item.status === 'COMPLIANT' ? 'COMPLIANT (LULUS)' : item.status === 'NEEDS_CORRECTION' ? 'PERBAIKAN MINOR' : 'NON-COMPLIANT (MAYOR)'}
+                      </span>
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -287,10 +396,10 @@ export const RealTimeAuditView: React.FC<RealTimeAuditViewProps> = ({
               <div className="p-3 bg-slate-900 rounded border border-slate-800 space-y-2">
                 <div className="flex justify-between font-bold text-white text-xs">
                   <span>Hasil Skor Indeks Integritas Halal:</span>
-                  <span className="font-mono text-emerald-400">{halalScore}% (GRADE A - LULUS AUDIT)</span>
+                  <span className="font-mono text-emerald-400">{effectiveScore}% ({effectiveScore >= 90 ? 'GRADE A - LULUS AUDIT' : 'PERLU PERBAIKAN'})</span>
                 </div>
                 <p className="text-slate-400 text-[11px] leading-relaxed">
-                  Berdasarkan pemantauan sensor telemetri IoT kontinu, pemisahan fisik rak penyimpanan ambient dan cold chain (-20°C), verifikasi sertifikat BPJPH aktif pada modul E-Procurement, serta kesiapan stasiun pensucian Sertu/Samak, fasilitas pergudangan dinyatakan <strong>MEMENUHI KETENTUAN (COMPLIANT)</strong> secara syariat dan regulasi nasional UU JPH No. 33/2014.
+                  Berdasarkan pemantauan sensor telemetri IoT kontinu, pemisahan fisik rak penyimpanan ambient dan cold chain (-20°C), verifikasi sertifikat BPJPH aktif pada modul E-Procurement, serta kesiapan stasiun pensucian Sertu/Samak, fasilitas pergudangan dinyatakan <strong>{effectiveScore >= 90 ? 'MEMENUHI KETENTUAN (COMPLIANT)' : 'MEMERLUKAN TINDAKAN KOREKSI SEGERA'}</strong> secara syariat dan regulasi nasional UU JPH No. 33/2014.
                 </p>
               </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VehicleFleet } from '../types/logistics';
 import { calculateCarbonEmissionsKg } from '../utils/logisticsFormulas';
 import { 
@@ -13,7 +13,11 @@ import {
   Sliders, 
   Layers, 
   Clock,
-  ArrowRight
+  ArrowRight,
+  RotateCcw,
+  Play,
+  Pause,
+  Navigation
 } from 'lucide-react';
 
 interface OmnichannelGreenViewProps {
@@ -31,12 +35,60 @@ export const OmnichannelGreenView: React.FC<OmnichannelGreenViewProps> = ({
   const [wavePickingActive, setWavePickingActive] = useState<boolean>(false);
   const [waveProgress, setWaveProgress] = useState<number>(68);
 
+  // Active Vehicle Route Simulation
+  const [activeTransitVehicle, setActiveTransitVehicle] = useState<VehicleFleet | null>(fleet[0] || null);
+  const [transitProgress, setTransitProgress] = useState<number>(35);
+  const [isTransitRunning, setIsTransitRunning] = useState<boolean>(true);
+  const [transitBattery, setTransitBattery] = useState<number>(88);
+  const [transitReeferTemp, setTransitReeferTemp] = useState<number>(-19.4);
+
   // Emissions calculations
   const dieselEmissions = calculateCarbonEmissionsKg(distanceKm, 0.82);
   const evEmissions = calculateCarbonEmissionsKg(distanceKm, 0.18);
   const eBikeEmissions = calculateCarbonEmissionsKg(distanceKm, 0.04);
   const carbonSavedKg = +(dieselEmissions - evEmissions).toFixed(2);
   const treesEquivalent = +(carbonSavedKg / 1.8).toFixed(1); // approx 1.8kg CO2 per tree-month
+
+  // Automatic journey movement ticker
+  useEffect(() => {
+    if (!isTransitRunning) return;
+    const timer = setInterval(() => {
+      setTransitProgress(prev => {
+        if (prev >= 98) {
+          return 5; // loop back to DC
+        }
+        return prev + 3;
+      });
+
+      // minor sensor jitter
+      setTransitReeferTemp(prev => {
+        const jitter = +( (Math.random() - 0.5) * 0.2 ).toFixed(1);
+        return Math.min(-18.2, Math.max(-21.0, +(prev + jitter).toFixed(1)));
+      });
+
+      setTransitBattery(prev => (prev <= 20 ? 98 : prev - 0.2));
+    }, 800);
+
+    return () => clearInterval(timer);
+  }, [isTransitRunning]);
+
+  const handleStartFleetSimulation = (vehicle: VehicleFleet) => {
+    setActiveTransitVehicle(vehicle);
+    setTransitProgress(10);
+    setIsTransitRunning(true);
+    onDispatchFleet(vehicle.id);
+  };
+
+  const handleResetFleetSimulation = () => {
+    setTransitProgress(0);
+    setIsTransitRunning(false);
+    setTransitBattery(98);
+    setTransitReeferTemp(-20.0);
+    setWaveProgress(0);
+    setWavePickingActive(false);
+    setDistanceKm(45);
+    setCargoWeightKg(850);
+  };
 
   const handleTriggerWave = () => {
     setWavePickingActive(true);
@@ -53,6 +105,14 @@ export const OmnichannelGreenView: React.FC<OmnichannelGreenViewProps> = ({
     }, 600);
   };
 
+  const getTransitLocationName = (pct: number) => {
+    if (pct < 20) return 'Gerbang Keluar Halal DC (Staging)';
+    if (pct < 45) return 'Jalan Tol Lingkar Luar Km 18 (Koridor Dingin)';
+    if (pct < 70) return 'Urban Micro-Hub Serpong (Sortir Last-Mile)';
+    if (pct < 90) return 'Menuju Gerai Hypermarket / Konsumen Akhir';
+    return 'Tiba di Lokasi Tujuan (Selesai Kirim)';
+  };
+
   return (
     <div className="space-y-6">
       {/* Overview Banner */}
@@ -67,14 +127,25 @@ export const OmnichannelGreenView: React.FC<OmnichannelGreenViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleTriggerWave}
-          disabled={wavePickingActive}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1.5 self-start md:self-auto"
-        >
-          <Layers className="w-4 h-4" />
-          <span>{wavePickingActive ? 'Proses Wave Picking...' : 'Lepas Wave Picking Omnichannel'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleTriggerWave}
+            disabled={wavePickingActive}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+          >
+            <Layers className="w-4 h-4" />
+            <span>{wavePickingActive ? 'Proses Wave Picking...' : 'Lepas Wave Picking Omnichannel'}</span>
+          </button>
+
+          <button
+            onClick={handleResetFleetSimulation}
+            title="Reset simulasi pergerakan armada dan gelombang wave picking"
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+            <span>Reset Armada & Rute</span>
+          </button>
+        </div>
       </div>
 
       {/* Wave Picking Status Strip if active or recent */}
@@ -91,6 +162,109 @@ export const OmnichannelGreenView: React.FC<OmnichannelGreenViewProps> = ({
             className="bg-emerald-500 h-full transition-all duration-300"
             style={{ width: `${waveProgress}%` }}
           />
+        </div>
+      </div>
+
+      {/* VISIBLE ACTIVE LAST-MILE DELIVERY ROUTE TRACKER ARENA */}
+      <div className="p-5 bg-slate-900 border border-emerald-500/40 rounded-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <Navigation className="w-5 h-5 text-emerald-400" />
+            <div>
+              <h3 className="text-sm font-bold text-white">
+                Simulasi Rute Pengiriman Last-Mile Real-Time (GPS & E-Seal Tracking)
+              </h3>
+              <p className="text-xs text-slate-400">
+                Kendaraan Aktif:{' '}
+                <strong className="text-white">
+                  {activeTransitVehicle?.plateNumber} (
+                  {activeTransitVehicle?.type === 'ELECTRIC_VAN' ? 'Electric Cargo Van' : 'Cargo E-Bike'}
+                  )
+                </strong>{' '}
+                · Menuju: <strong className="text-emerald-400">{activeTransitVehicle?.destination}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsTransitRunning(prev => !prev)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all flex items-center gap-1.5 shadow ${
+                isTransitRunning ? 'bg-amber-600 hover:bg-amber-500' : 'bg-emerald-600 hover:bg-emerald-500'
+              }`}
+            >
+              {isTransitRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              <span>{isTransitRunning ? 'Jeda Rute' : 'Jalankan Rute'}</span>
+            </button>
+            <span className="text-xs font-mono text-emerald-400 bg-emerald-950 px-2.5 py-1 rounded border border-emerald-800 font-bold">
+              {transitProgress}% Perjalanan
+            </span>
+          </div>
+        </div>
+
+        {/* Graphical Animated Delivery Map Track */}
+        <div className="relative bg-slate-950 border border-slate-800 rounded-xl p-5 overflow-hidden">
+          {/* Waypoints Header */}
+          <div className="relative h-14 flex items-center">
+            {/* Road bar */}
+            <div className="absolute inset-x-0 h-2 bg-slate-800 border-t border-b border-dashed border-slate-600 rounded" />
+
+            {/* Waypoints */}
+            <div className="absolute inset-x-0 flex justify-between items-center px-4">
+              <div className="flex flex-col items-center">
+                <div className="w-4 h-4 rounded-full bg-emerald-900 border-2 border-emerald-400 flex items-center justify-center" />
+                <span className="text-[10px] text-emerald-300 font-bold mt-1">Gudang DC</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="w-4 h-4 rounded-full bg-cyan-900 border-2 border-cyan-400 flex items-center justify-center" />
+                <span className="text-[10px] text-cyan-300 font-bold mt-1">Tol Lingkar</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="w-4 h-4 rounded-full bg-sky-900 border-2 border-sky-400 flex items-center justify-center" />
+                <span className="text-[10px] text-sky-300 font-bold mt-1">Urban Hub</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="w-4 h-4 rounded-full bg-amber-900 border-2 border-amber-400 flex items-center justify-center" />
+                <span className="text-[10px] text-amber-300 font-bold mt-1">Superindo Retail</span>
+              </div>
+            </div>
+
+            {/* Moving Vehicle */}
+            <div
+              className="absolute z-10 transition-all duration-700 ease-linear flex flex-col items-center -translate-x-1/2"
+              style={{ left: `${transitProgress}%` }}
+            >
+              <div className="px-2 py-0.5 bg-emerald-500 text-slate-950 text-[10px] font-extrabold rounded shadow-lg flex items-center gap-1 whitespace-nowrap animate-bounce">
+                <span>🚚 {activeTransitVehicle?.plateNumber}</span>
+              </div>
+              <div className="w-8 h-8 rounded-lg bg-emerald-600 border-2 border-white shadow-xl flex items-center justify-center text-white mt-0.5">
+                <Truck className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Real-time Telemetry Telematics Bar */}
+          <div className="mt-4 pt-3 border-t border-slate-900 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-800">
+              <span className="text-slate-400 block text-[10px]">Lokasi Real-Time:</span>
+              <span className="font-semibold text-white truncate block">{getTransitLocationName(transitProgress)}</span>
+            </div>
+            <div className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-800">
+              <span className="text-slate-400 block text-[10px]">Suhu Box Reefer:</span>
+              <span className="font-mono font-bold text-cyan-400">{transitReeferTemp}°C (Aman)</span>
+            </div>
+            <div className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-800">
+              <span className="text-slate-400 block text-[10px]">Baterai EV:</span>
+              <span className="font-mono font-bold text-emerald-400">{Math.round(transitBattery)}%</span>
+            </div>
+            <div className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-800">
+              <span className="text-slate-400 block text-[10px]">Status Segel Halal:</span>
+              <span className="font-bold text-emerald-300 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>E-Seal Terkunci</span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -220,14 +394,17 @@ export const OmnichannelGreenView: React.FC<OmnichannelGreenViewProps> = ({
               Armada Transportasi & Distribusi Halal Terdedikasi (HAS 23000 & SNI 99004)
             </h3>
           </div>
-          <span className="text-xs text-slate-400">Total Kendaraan: {fleet.length} Unit</span>
+          <span className="text-xs text-slate-400">Total Kendaraan: {fleet.length} Unit · Klik untuk simulasikan perjalanan</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {fleet.map((veh) => (
             <div
               key={veh.id}
-              className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3"
+              onClick={() => handleStartFleetSimulation(veh)}
+              className={`p-4 bg-slate-950 border rounded-xl space-y-3 cursor-pointer transition-all hover:border-emerald-500 ${
+                activeTransitVehicle?.id === veh.id ? 'border-emerald-500 ring-1 ring-emerald-500/40' : 'border-slate-800'
+              }`}
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -269,11 +446,14 @@ export const OmnichannelGreenView: React.FC<OmnichannelGreenViewProps> = ({
               </div>
 
               <button
-                onClick={() => onDispatchFleet(veh.id)}
-                className="w-full mt-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded transition-colors flex items-center justify-center gap-1.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartFleetSimulation(veh);
+                }}
+                className="w-full mt-2 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1.5 shadow"
               >
-                <Clock className="w-3.5 h-3.5" />
-                <span>Simulasikan Pergerakan Rute</span>
+                <Navigation className="w-3.5 h-3.5" />
+                <span>Simulasikan Perjalanan Rute Ini</span>
               </button>
             </div>
           ))}

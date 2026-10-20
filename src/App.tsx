@@ -252,6 +252,21 @@ export default function App() {
     setScenarios(LAB_SCENARIOS);
   };
 
+  const handleRunScenarioInApp = (category: LabScenario['category']) => {
+    setShowLabModal(false);
+    if (category === 'IoT & Cold Chain') {
+      handleTriggerAnomaly('COLD_CHAIN');
+    } else if (category === 'Halal Cross-Contamination') {
+      handleTriggerAnomaly('QUARANTINE_SPILL');
+    } else if (category === 'Green E-Commerce Peak') {
+      setActiveTab('omnichannel');
+    } else if (category === 'Regulatory Audit BPJPH') {
+      handleTamperBlock(2, 6.5);
+    } else {
+      setActiveTab('warehouse');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Top 3-Zone Compliant Navigation */}
@@ -310,6 +325,7 @@ export default function App() {
             blocks={blockchain}
             onTamperBlock={handleTamperBlock}
             onRestoreBlockchain={handleRestoreBlockchain}
+            onAddNewBlock={(newBlock) => setBlockchain(prev => [...prev, newBlock])}
           />
         )}
 
@@ -335,6 +351,7 @@ export default function App() {
             onImportFullState={handleImportFullState}
             onResetToDefault={handleResetToDefault}
             onOpenLab={() => setShowLabModal(true)}
+            onNavigateTab={setActiveTab}
           />
         )}
       </main>
@@ -361,6 +378,7 @@ export default function App() {
           onAddNewScenario={handleAddNewScenario}
           onDeleteScenario={(id) => setScenarios(prev => prev.filter(s => s.id !== id))}
           onOpenStudio={() => setActiveTab('studio')}
+          onRunScenarioInApp={handleRunScenarioInApp}
         />
       )}
 
