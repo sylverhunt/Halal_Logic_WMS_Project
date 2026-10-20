@@ -28,3 +28,64 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Realistic CCTV & AI Vision Animations */
+@keyframes cctvScan {
+  0% { top: 2%; opacity: 0.3; }
+  15% { opacity: 0.9; }
+  85% { opacity: 0.9; }
+  100% { top: 96%; opacity: 0.3; }
+}
+
+@keyframes radarSweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes cctvPatrol {
+  0% { transform: scale(1.12) translate(0%, 0%); }
+  25% { transform: scale(1.16) translate(-2.5%, -1.5%); }
+  50% { transform: scale(1.14) translate(-4%, 1%); }
+  75% { transform: scale(1.17) translate(1.5%, -0.8%); }
+  100% { transform: scale(1.12) translate(0%, 0%); }
+}
+
+@keyframes vaporDrift {
+  0% { transform: translateX(-4%) translateY(0) scale(1); opacity: 0.25; }
+  50% { transform: translateX(4%) translateY(-6px) scale(1.06); opacity: 0.5; }
+  100% { transform: translateX(-4%) translateY(0) scale(1); opacity: 0.25; }
+}
+
+@keyframes conveyorRoll {
+  0% { background-position: 0 0; }
+  100% { background-position: 28px 0; }
+}
+
+@keyframes hudPulse {
+  0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8)); }
+}
+
+.animate-cctv-scan {
+  animation: cctvScan 3.2s ease-in-out infinite alternate;
+}
+
+.animate-radar-sweep {
+  animation: radarSweep 2.2s linear infinite;
+}
+
+.animate-cctv-patrol {
+  animation: cctvPatrol 24s ease-in-out infinite;
+}
+
+.animate-vapor-drift {
+  animation: vaporDrift 7s ease-in-out infinite;
+}
+
+.animate-conveyor-roll {
+  animation: conveyorRoll 1.4s linear infinite;
+}
+
+.animate-hud-pulse {
+  animation: hudPulse 2s ease-in-out infinite;
+}

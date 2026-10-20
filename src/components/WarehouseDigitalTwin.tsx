@@ -22,8 +22,14 @@ import {
   Layers,
   ChevronRight,
   TrendingUp,
-  Activity
+  Activity,
+  Camera,
+  Video,
+  Eye,
+  Scan,
+  Maximize2
 } from 'lucide-react';
+import { WarehouseCctvLiveFeed } from './WarehouseCctvLiveFeed';
 
 interface WarehouseDigitalTwinProps {
   bays: WarehouseBay[];
@@ -55,7 +61,6 @@ export const WarehouseDigitalTwin: React.FC<WarehouseDigitalTwinProps> = ({
   const [selectedBay, setSelectedBay] = useState<WarehouseBay | null>(null);
   const [relocateModalItem, setRelocateModalItem] = useState<{ item: InventoryItem; fromBayId: string } | null>(null);
   const [targetBayId, setTargetBayId] = useState<string>('');
-  const [showImageBanner, setShowImageBanner] = useState<boolean>(true);
 
   // --- VISIBLE ANIMATED SIMULATION ENGINE STATES ---
   const [simSeconds, setSimSeconds] = useState<number>(34200); // starts at 09:30:00
@@ -516,38 +521,14 @@ export const WarehouseDigitalTwin: React.FC<WarehouseDigitalTwinProps> = ({
         </div>
       </div>
 
-      {/* Visual Facility Architecture Banner */}
-      {showImageBanner && (
-        <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900 group">
-          <img
-            src="/src/assets/images/warehouse_digital_twin_iso_1791795136928.jpg"
-            alt="Arsitektur Fasilitas Gudang Pintar Halal"
-            referrerPolicy="no-referrer"
-            className="w-full h-44 sm:h-56 md:h-64 object-cover object-center opacity-85 group-hover:opacity-95 transition-opacity"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent flex flex-col justify-end p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs uppercase tracking-wider text-emerald-400 font-semibold">
-                  HalalLogix Engineering Testbed · Kampus Merdeka Praktikum
-                </span>
-                <h3 className="text-lg md:text-xl font-bold text-white mt-0.5">
-                  Fasilitas Gudang Pintar Berstandar Jaminan Produk Halal (HAS 23000)
-                </h3>
-                <p className="text-xs text-slate-300 max-w-2xl mt-1">
-                  Dilengkapi pemisahan zonasi mutlak, sensor RTD telemetri rantai dingin, sistem konveyor otomatis (AS/RS & AGV), dan stasiun pensucian sertu.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowImageBanner(false)}
-                className="text-xs text-slate-400 hover:text-white px-2 py-1 bg-slate-900/80 rounded border border-slate-700"
-              >
-                Sembunyikan Visual
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* REALISTIC CCTV & AI VISION MULTI-ANGLE SURVEILLANCE FEED */}
+      <WarehouseCctvLiveFeed
+        simSeconds={simSeconds}
+        agvPositionPercent={agvPositionPercent}
+        simulationRunning={simulationRunning}
+        simulationSpeed={simulationSpeed}
+        onAddEventLog={(newLog) => setEventLogs(prev => [newLog, ...prev.slice(0, 6)])}
+      />
 
       {/* Interactive 2D Warehouse Floor Canvas */}
       <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-xl space-y-6">
