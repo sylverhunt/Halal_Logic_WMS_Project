@@ -26,6 +26,7 @@ import {
   Wifi,
   Sparkles
 } from 'lucide-react';
+import warehouseDigitalTwinImg from '../assets/images/warehouse_digital_twin_iso_1791795136928.jpg';
 
 interface WarehouseCctvLiveFeedProps {
   simSeconds: number;
@@ -279,9 +280,15 @@ export const WarehouseCctvLiveFeed: React.FC<WarehouseCctvLiveFeedProps> = ({
           }}
         >
           <img
-            src="/src/assets/images/warehouse_digital_twin_iso_1791795136928.jpg"
+            src={warehouseDigitalTwinImg}
             alt="Live CCTV Camera Feed"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              if (!target.src.includes('warehouse_digital_twin.jpg')) {
+                target.src = '/warehouse_digital_twin.jpg';
+              }
+            }}
             className={`w-full h-full object-cover transition-all duration-700 ${
               activeCamera === 'CAM-01'
                 ? 'object-left brightness-95'
