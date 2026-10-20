@@ -1,0 +1,6 @@
+{
+  "name": "HalalLogix WMS - Simulator Logistik Halal & E-Supply Chain",
+  "description": "Platform simulasi WMS dan rantai pasok digital untuk mahasiswa Teknik Logistik: IoT, Big Data, E-Procurement, Omnichannel, Green Logistics, Blockchain, Standar Halal (UU JPH & BPJPH), HCCP, dan Audit Real-Time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
